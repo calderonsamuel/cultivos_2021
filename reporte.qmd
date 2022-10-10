@@ -1,0 +1,66 @@
+---
+title: "Evolución de cultivos de coca 2018-2021"
+format: html
+editor: visual
+execute:
+    echo: false
+    warning: false
+    message: false
+---
+
+El presente reporte se alimenta del reporte 07 de DEVIDA ...
+
+```{r}
+library(tidyverse)
+
+cultivos <- read_csv("data/superficie-cultivos.csv") |> 
+    pivot_longer(
+        cols = c(`2018`:`2021`), 
+        names_to = "year", 
+        values_to = "hectareas"
+    ) |> 
+    mutate(
+        across(.fns = ~if_else(.x == "-", NA_character_, .x)),
+        hectareas = parse_number(hectareas)
+    )
+```
+
+```{r}
+cultivos_anuales <- cultivos |> 
+    group_by(zona, year) |> 
+    summarise(total = sum(hectareas, na.rm = TRUE)) |> 
+    mutate(nivel = if_else(any(total > 4000), "alto", "bajo")) |> 
+    ungroup() 
+```
+
+```{r}
+cultivos_anuales |> 
+    group_by(zona) |> 
+    filter(!any(total == 0))
+```
+
+```{r}
+cultivos |> 
+    filter(year == "2021") |> 
+    group_by(zona) |> 
+    summarise(total = sum(hectareas, na.rm = TRUE)) |> 
+    arrange(desc(total))
+```
+
+```{r}
+cultivos_anuales |> 
+    filter(nivel == "alto") |> 
+    ggplot(aes(year, total, color = zona)) +
+    geom_point() +
+    geom_line(aes(group = zona)) +
+    theme(legend.position = "bottom")
+```
+
+```{r}
+cultivos_anuales |> 
+    filter(nivel == "bajo") |> 
+    ggplot(aes(year, total, color = zona)) +
+    geom_point() +
+    geom_line(aes(group = zona)) +
+    theme(legend.position = "bottom")
+```
